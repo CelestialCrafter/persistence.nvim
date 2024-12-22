@@ -8,16 +8,8 @@ M._active = false
 local e = vim.fn.fnameescape
 
 ---@param opts? {branch?: boolean}
-function M.current(opts)
-  opts = opts or {}
-  local name = vim.fn.getcwd():gsub("[\\/:]+", "%%")
-  if Config.options.branch and opts.branch ~= false then
-    local branch = M.branch()
-    if branch and branch ~= "main" and branch ~= "master" then
-      name = name .. "%%" .. branch:gsub("[\\/:]+", "%%")
-    end
-  end
-  return Config.options.dir .. name .. ".vim"
+function M.current()
+  return Config.options.dir .. Config.options.name() .. ".vim"
 end
 
 function M.setup(opts)
@@ -104,21 +96,13 @@ function M.last()
 end
 
 function M.select()
-  ---@type { session: string, dir: string, branch?: string }[]
+  ---@type { session: string, file: string }[]
   local items = {}
   local have = {} ---@type table<string, boolean>
   for _, session in ipairs(M.list()) do
     if uv.fs_stat(session) then
       local file = session:sub(#Config.options.dir + 1, -5)
-      local dir, branch = unpack(vim.split(file, "%%", { plain = true }))
-      dir = dir:gsub("%%", "/")
-      if jit.os:find("Windows") then
-        dir = dir:gsub("^(%w)/", "%1:/")
-      end
-      if not have[dir] then
-        have[dir] = true
-        items[#items + 1] = { session = session, dir = dir, branch = branch }
-      end
+      items[#items + 1] = { session = session, file = file }
     end
   end
   vim.ui.select(items, {
@@ -132,15 +116,6 @@ function M.select()
       M.load()
     end
   end)
-end
-
---- get current branch name
----@return string?
-function M.branch()
-  if uv.fs_stat(".git") then
-    local ret = vim.fn.systemlist("git branch --show-current")[1]
-    return vim.v.shell_error == 0 and ret or nil
-  end
 end
 
 return M
