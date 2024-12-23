@@ -9,7 +9,12 @@ local e = vim.fn.fnameescape
 
 ---@param opts? {branch?: boolean}
 function M.current()
-  return Config.options.dir .. Config.options.name() .. ".vim"
+  local name = Config.options.name()
+  if name == nil then
+    return nil
+  end
+
+  return Config.options.dir .. name .. ".vim"
 end
 
 function M.setup(opts)
@@ -59,7 +64,12 @@ function M.stop()
 end
 
 function M.save()
-  vim.cmd("mks! " .. e(M.current()))
+  local path = M.current()
+  if path == nil then
+    return
+  end
+  
+  vim.cmd("mks! " .. e(path))
 end
 
 ---@param opts? { last?: boolean }
@@ -70,11 +80,9 @@ function M.load(opts)
   if opts.last then
     file = M.last()
   else
-    file = M.current()
-    if vim.fn.filereadable(file) == 0 then
-      file = M.current({ branch = false })
-    end
+      file = M.current()
   end
+
   if file and vim.fn.filereadable(file) ~= 0 then
     M.fire("LoadPre")
     vim.cmd("silent! source " .. e(file))
